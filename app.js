@@ -47,18 +47,35 @@ export function showPage(pageId) {
   if (el) el.classList.remove("hidden");
 }
 
-export function showStatus(msg, type = "info", timeout = 3000) {
+export function showStatus(msg, type = "info", timeout = 3000, progress = null) {
   if (!statusBar) return;
-  statusBar.textContent = msg;
+
+  // pastikan ada elemen teks & progress bar
+  let textEl = document.getElementById("status-text");
+  let progressWrap = document.getElementById("status-progress");
+  let progressBar = document.getElementById("status-progress-bar");
+
+  if (textEl) textEl.textContent = msg;
+  else statusBar.textContent = msg;
+
   statusBar.className = "";
   statusBar.classList.add(type, "visible");
   statusBar.classList.remove("hidden");
+
+  if (progress !== null && progressWrap && progressBar) {
+    progressWrap.classList.remove("hidden");
+    progressBar.style.width = progress + "%";
+  } else if (progressWrap) {
+    progressWrap.classList.add("hidden");
+  }
+
   if (timeout) {
     setTimeout(() => {
       statusBar.classList.add("hidden");
     }, timeout);
   }
 }
+
 
 export function initAppAfterAuth(user) {
   currentUser = user;
@@ -249,6 +266,9 @@ const senaraiPerkataanEl = document.getElementById("senarai-perkataan");
 
 // butang baru untuk padam banyak
 const btnPadamPilih = document.getElementById("btn-padampilih");
+
+// butang Export Mod Tambah Pantas
+const btnExport = document.getElementById("btn-export");
 
 let cachePerkataan = [];
 
@@ -449,25 +469,24 @@ btnTambahSemua?.addEventListener("click", async () => {
   const raw = bulkWords.value.trim();
   if (!raw) return;
 
-  // pecahkan ikut baris kosong (Enter kosong)
   let blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
 
-  // default prefix kosong
   let prefix = "";
-
-  // check kalau baris pertama ada setting
   if (blocks[0].toLowerCase().startsWith("setting")) {
-    const code = blocks[0].substring("setting".length).trim(); // contoh: ms010 atau ms
-    prefix = code; // kalau "ms" → jadi "ms-", kalau "ms010" → jadi "ms010-"
-    blocks = blocks.slice(1); // buang baris setting supaya tak dianggap perkataan
+    const code = blocks[0].substring("setting".length).trim();
+    prefix = code;
+    blocks = blocks.slice(1);
   }
 
+  // status mula + progress kosong
+  showStatus(`Sedang menambah ${blocks.length} perkataan...`, "info", 0, 0);
+
+  let count = 0;
   for (const block of blocks) {
     const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
     let word = lines[0];
     const meaning = lines.slice(1).join(" ");
 
-    // tambah prefix kalau ada
     if (prefix) {
       word = `${prefix}-${word}`;
     }
@@ -481,12 +500,17 @@ btnTambahSemua?.addEventListener("click", async () => {
       meaning: meaning,
       createdAt: serverTimestamp()
     });
+
+    count++;
+    const percent = Math.round((count / blocks.length) * 100);
+    showStatus(`Sedang menambah... ${count}/${blocks.length}`, "info", 0, percent);
   }
 
-  showStatus(`${blocks.length} perkataan ditambah.`, "success");
+  showStatus(`${blocks.length} perkataan ditambah.`, "success", 3000);
   bulkWords.value = "";
   loadPerkataan();
 });
+
 
 // ================== ELEMEN PERKATAAN (PAGE 5) =================
 
@@ -998,16 +1022,12 @@ async function bukaPerkataanDariLog(logItem) {
 }
 
 // ================== EXPORT MOD TAMBAH PANTAS ==================
-const btnExport = document.getElementById("btn-export");
-const fileImport = document.getElementById("file-import");
-
 btnExport?.addEventListener("click", async () => {
   if (!currentBahasa || !currentHuruf) {
     showStatus("Sila pilih bahasa & huruf sebelum export.", "error");
     return;
   }
   try {
-    // Papar status sedang export (timeout=0 supaya kekal sehingga selesai)
     showStatus("Sedang export...", "info", 0);
 
     const q = query(
@@ -1019,17 +1039,28 @@ btnExport?.addEventListener("click", async () => {
     );
     const snap = await getDocs(q);
 
-    // bina string ikut format Mod Tambah Pantas
     let output = "";
     snap.docs.forEach((d, idx) => {
       const data = d.data();
-      output += data.word + "\n";
-      if (data.meaning) {
-        output += data.meaning + "\n";
+
+      // buang semua jenis enter (CRLF, CR, LF) dalam satu elemen
+      const cleanWord = (data.word || "")
+        .replace(/\r\n|\r|\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const cleanMeaning = (data.meaning || "")
+        .replace(/\r\n|\r|\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      output += cleanWord + "\n";
+      if (cleanMeaning) {
+        output += cleanMeaning + "\n";
       }
-      // tambah baris kosong sebagai sempadan
+
       if (idx < snap.docs.length - 1) {
-        output += "\n";
+        output += "\n"; // sempadan antara elemen
       }
     });
 
@@ -1041,14 +1072,12 @@ btnExport?.addEventListener("click", async () => {
     a.click();
     URL.revokeObjectURL(url);
 
-    // Papar status selesai
     showStatus("Export Mod Tambah Pantas berjaya.", "success");
   } catch (err) {
     console.error(err);
     showStatus("Gagal export.", "error");
   }
 });
-
 
 // ================== KAMUS + TTS =================
 
