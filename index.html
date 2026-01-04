@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StressDaily - Kamus Hafalan</title>
+  <title>stress-daily - Kamus Hafalan</title>
 
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
@@ -15,15 +15,20 @@
 
     <!-- HEADER GLOBAL -->
     <header id="app-header">
-      <h1>Stresskedua</h1>
+      <h1>Stress-Daily</h1>
       <div id="header-actions">
         <button id="btn-header-log" class="btn small hidden">Log</button>
         <button id="btn-header-logout" class="btn small hidden">Log Keluar</button>
       </div>
     </header>
 
-    <!-- STATUS / ALERT -->
-    <div id="status-bar" class="hidden"></div>
+<!-- STATUS / ALERT -->
+<div id="status-bar" class="hidden">
+  <span id="status-text"></span>
+  <div id="status-progress" class="progress hidden">
+    <div id="status-progress-bar"></div>
+  </div>
+</div>
 
     <!-- SECTION: LOGIN (PAGE 1) -->
     <section id="page-login" class="page active">
@@ -181,8 +186,6 @@ sempoa"></textarea>
 <div class="toolbar">
   <button id="btn-padamlah-semua-log" class="btn danger">Padam semua log</button>
   <button id="btn-export" class="btn secondary" disabled>Export JSON</button>
-  <button id="btn-import" class="btn secondary" disabled>Import JSON</button>
-  <input type="file" id="file-import" accept="application/json" class="hidden" />
   <button id="btn-ke-kamus-dari-log" class="btn secondary">Kamus &amp; TTS</button>
 </div>
 
